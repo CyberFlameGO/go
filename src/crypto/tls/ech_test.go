@@ -90,11 +90,12 @@ Fy/vytRwyjhHuX9ntc5ArCpwbAmY+oW/4w==
 
 // The ECH keys used by the client-facing server.
 const echTestKeys = `-----BEGIN ECH KEYS-----
-ACDhS0q2cTU1Qzi6hPM4BQ/HLnbEUZyWdY2GbmS0DVkumgBI/goARAwAIAAgi1Tu
-jWJ236k1VAMeRnysKbDigxLpDs/AGdEowK8KiBkABAABAAEAAAATY2xvdWRmbGFy
-ZS1lc25pLmNvbQAAACBmNj/zQe6OT/MR/MM39G6kwMJCJEXpdvTAkbdHErlgXwBI
-/goARAEAIAAgZ1Ru1uyGX6N9HYs5/pAE3KwUXRDBHD0Bdna8oP4uVEwABAABAAEA
-AAATY2xvdWRmbGFyZS1lc25pLmNvbQAA
+ACBpvnEYyFK6Ey4Pajbm6VaEsQp4bgRxoPVOs2wOiMuD+QBG/g0AQsMAIAAgCfU+
+VOBXjOut9a9m7wLhrZhHfM0GqE5BQLQK03DJf10ABAABAAElE2Nsb3VkZmxhcmUt
+ZXNuaS5jb20AAAAguffuF8tjWUORwFbQ3+cDDqkMQuuMV7py7p1EJfM9S3IAZ/4N
+AGMDABAAQQRhm1JRi7hkaK1HhcJq4ByJpK4fbsaD65xSqUuW0L53OYK3zEtz78pk
+NhWC9NlkItWc2SYOTrGGHc5WhmJxKCTbAAQAAQABKhNjbG91ZGZsYXJlLWVzbmku
+Y29tAAA=
 -----END ECH KEYS-----`
 
 // A sequence of ECH keys with unsupported versions.
@@ -108,18 +109,18 @@ AAATY2xvdWRmbGFyZS1lc25pLmNvbQAA
 
 // The sequence of ECH configurations corresponding to echTestKeys.
 const echTestConfigs = `-----BEGIN ECH CONFIGS-----
-AJD+CgBEDAAgACCLVO6NYnbfqTVUAx5GfKwpsOKDEukOz8AZ0SjArwqIGQAEAAEA
-AQAAABNjbG91ZGZsYXJlLWVzbmkuY29tAAD+CgBEAQAgACBnVG7W7IZfo30dizn+
-kATcrBRdEMEcPQF2dryg/i5UTAAEAAEAAQAAABNjbG91ZGZsYXJlLWVzbmkuY29t
-AAA=
+AK3+DQBCwwAgACAJ9T5U4FeM6631r2bvAuGtmEd8zQaoTkFAtArTcMl/XQAEAAEA
+ASUTY2xvdWRmbGFyZS1lc25pLmNvbQAA/g0AYwMAEABBBGGbUlGLuGRorUeFwmrg
+HImkrh9uxoPrnFKpS5bQvnc5grfMS3PvymQ2FYL02WQi1ZzZJg5OsYYdzlaGYnEo
+JNsABAABAAEqE2Nsb3VkZmxhcmUtZXNuaS5jb20AAA==
 -----END ECH CONFIGS-----`
 
 // An invalid sequence of ECH configurations.
 const echTestStaleConfigs = `-----BEGIN ECH CONFIGS-----
-AJD+CgBEAAAgACCNkMISpIMFmPZwDgob/CROvHD93NQFcX4h0SURHTJpRwAEAAEA
-AQAAABNjbG91ZGZsYXJlLWVzbmkuY29tAAD+CgBEAQAgACAH4P9K5l9BJ3aG4QUk
-fTjMWUoeLQZVdTxp5Qe0FWvDQwAEAAEAAQAAABNjbG91ZGZsYXJlLWVzbmkuY29t
-AAA=
+AK3+DQBCfgAgACA02DWuCoykTn5CZ/t+h3dXN2JLS5r5RlJPaOzH1UdnRgAEAAEA
+ASUTY2xvdWRmbGFyZS1lc25pLmNvbQAA/g0AY8YAEABBBIpQ8lWXbmjAgaFg6TDf
+si7tgaTV7fUMbrOZzCyKyIfv/cO872MYb9dvEH1Izu6LtKdGAlmKmu2pxtdpbsSW
+CX0ABAABAAEqE2Nsb3VkZmxhcmUtZXNuaS5jb20AAA==
 -----END ECH CONFIGS-----`
 
 // echTestProviderAlwaysAbort mocks an ECHProvider that, in response to any
@@ -345,16 +346,6 @@ var echTestCases = []echTestCase{
 		clientEnabled:             true,
 		serverEnabled:             true,
 		serverProviderAlwaysAbort: true,
-	},
-	{
-		// The client offers ECH, but sends the "ech_is_inner" extension in the
-		// ClientHelloOuter, causing the server to abort.
-		name:                "server abort: hello marked as inner and outer",
-		expectServerAbort:   true,
-		expectClientAbort:   true,
-		clientEnabled:       true,
-		serverEnabled:       true,
-		triggerOuterIsInner: true,
 	},
 	{
 		// The client offers ECH and it is accepted by the server. The HRR code
@@ -627,7 +618,6 @@ func TestECHHandshake(t *testing.T) {
 		testingECHOuterExtNone = false
 		testingECHOuterExtIncorrectOrder = false
 		testingECHOuterExtIllegal = false
-		testingECHOuterIsInner = false
 		testingECHTriggerPayloadDecryptError = false
 	}()
 
@@ -744,11 +734,6 @@ func TestECHHandshake(t *testing.T) {
 				testingECHOuterExtIllegal = true
 				n++
 			}
-			testingECHOuterIsInner = false
-			if test.triggerOuterIsInner {
-				testingECHOuterIsInner = true
-				n++
-			}
 			testingECHIllegalHandleAfterHRR = false
 			if test.triggerIllegalHandleAfterHRR {
 				testingECHIllegalHandleAfterHRR = true
@@ -772,13 +757,13 @@ func TestECHHandshake(t *testing.T) {
 
 			if test.expectClientAbort && client.err == nil {
 				t.Error("client succeeds; want abort")
-			} else {
+			} else if client.err != nil {
 				t.Logf("client err: %s", client.err)
 			}
 
 			if test.expectServerAbort && server.err == nil {
 				t.Errorf("server succeeds; want abort")
-			} else {
+			} else if server.err != nil {
 				t.Logf("server err: %s", server.err)
 			}
 
@@ -912,17 +897,17 @@ func TestECHProvider(t *testing.T) {
 	p := echTestLoadKeySet(echTestKeys)
 	t.Run("ok", func(t *testing.T) {
 		handle := []byte{
-			0, 1, 0, 1, 12, 0, 32, 40, 52, 167, 167, 21, 125, 151, 32, 250, 255, 1,
-			125, 206, 103, 62, 96, 189, 112, 126, 48, 221, 41, 198, 146, 100, 149,
-			29, 133, 103, 87, 87, 78,
+			0, 1, 0, 1, 195, 0, 32, 49, 215, 32, 55, 8, 132, 98, 118, 166, 113,
+			184, 40, 196, 151, 103, 20, 221, 148, 22, 72, 112, 152, 18, 20, 107,
+			15, 109, 178, 15, 98, 104, 66,
 		}
 		context := []byte{
-			1, 0, 32, 0, 1, 0, 1, 32, 129, 80, 17, 132, 239, 31, 114, 89, 23,
-			187, 164, 23, 163, 219, 188, 112, 106, 218, 216, 137, 91, 120, 65,
-			45, 245, 194, 159, 217, 145, 92, 80, 183, 16, 181, 208, 237, 170,
-			45, 26, 143, 238, 42, 39, 113, 20, 212, 136, 191, 198, 12, 187, 77,
-			142, 221, 127, 135, 192, 139, 29, 241, 196, 206, 12, 0, 0, 0, 0, 0,
-			0, 0, 0, 0, 0, 0, 0,
+			1, 0, 32, 0, 1, 0, 1, 32, 111, 237, 227, 138, 43, 202, 113, 109,
+			127, 174, 36, 48, 232, 103, 97, 52, 76, 112, 136, 36, 220, 91, 12,
+			21, 63, 194, 77, 110, 112, 25, 241, 135, 16, 214, 55, 95, 236, 101,
+			6, 49, 56, 18, 215, 166, 137, 136, 225, 58, 54, 12, 229, 100, 254,
+			43, 179, 2, 188, 179, 6, 166, 138, 138, 12, 0, 0, 0, 0, 0, 0, 0, 0,
+			0, 0, 0, 0,
 		}
 		testECHProvider(t, p, handle, extensionECH, ECHProviderResult{
 			Status:       ECHProviderSuccess,
